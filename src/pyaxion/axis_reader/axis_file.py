@@ -23,6 +23,8 @@ from pyaxion.axis_reader.tags.tag import (Annotation, LeapInductionEvent,
                                  KeyValuePairTag, ViabilityImpedanceTag)
 from pyaxion.axis_reader.tags.tag_type import TagType
 from pyaxion.axis_reader.dataset.dataset import DataSet
+from pyaxion.axis_reader.dataset.continuous_dataset import ContinuousDataSet
+from pyaxion.axis_reader.dataset.spike_dataset import SpikeDataSet
 
 def _custom_formatwarning(msg, category, filename, lineno, line=None):
     # Format the warning message without the location and source code
@@ -334,7 +336,7 @@ class AxisFile:
                           f"found in file {file_name} which were missing metadata.")
 
         # this needs to be implemented, basically we want the last event created
-        # self.leap_induction = sorted(self.leap_induction, key=lambda x: x.CreationDate)[-1]
+        self.leap_induction = sorted(self.leap_induction, key=lambda x: x.creation_date)[-1]
         self.all_tags = tag_map
 
     def seek_entry_record(self, entry:EntryRecord):
@@ -345,9 +347,39 @@ class AxisFile:
             self.file_id.seek(self.entry_records[i].length, 1)
             i += 1
         return self.file_id.tell()
-    
+
+    @property
+    def raw_voltage(self) -> ContinuousDataSet|None:
+        """Returns the raw voltage dataset if it exists in the file, otherwise None."""
+        return next(filter(lambda x: x.is_raw_voltage(), self.datasets), None)
+
+    @property
+    def broad_band_high(self):
+        """Returns the broad band high frequency dataset if it exists in the file, otherwise None."""
+        return next(filter(lambda x: x.is_highband() , self.datasets), None)
+
+    @property
+    def broad_band_low(self):
+        """Returns the broad band low frequency dataset if it exists in the file, otherwise None."""
+        return next(filter(lambda x: x.is_lowband() , self.datasets), None)
+
+    @property
+    def raw_contractility(self):
+        """Returns the raw contractility dataset if it exists in the file, otherwise None."""
+        return next(filter(lambda x: x.is_raw_contractility() , self.datasets), None)
+
+    @property
+    def spikes(self):
+        """Returns the spike dataset if it exists in the file, otherwise None."""
+        return next(filter(lambda x: x.is_spikes() , self.datasets), None)
+
+    @property
+    def lfp_events(self):
+        """Returns the LFP events dataset if it exists in the file, otherwise None."""
+        return next(filter(lambda x: x.is_lfp() , self.datasets), None)
+
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_value, traceback):
         self.file_id.close()

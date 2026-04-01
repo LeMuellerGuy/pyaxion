@@ -134,6 +134,7 @@ class LeapInductionEvent(Tag):
         # however, python does not check this and thus the file size has
         # to be used as a reference
         file_id.seek(start)
+        self.creation_date = raw_tag.creation_date
         if start < getsize(file_id.name):
 
             version = np.fromfile(file_id, dtype=np.uint16, count=2)

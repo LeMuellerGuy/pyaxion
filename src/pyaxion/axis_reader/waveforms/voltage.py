@@ -26,8 +26,7 @@ class VoltageWaveform(Waveform):
         # %Get Base Data
         # fData = double([this(:).Data]);
         # fSource = [this(:).Source];
-        voltage_scale = self.source.header.voltage_scale
-        data = self.data * voltage_scale
+        data = self.data * self.source.voltage_scale
         return time, data
 
     def get_voltage_vector(self):

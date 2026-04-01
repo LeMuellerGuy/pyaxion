@@ -42,10 +42,10 @@ class Waveform:
         return time_data, voltage_data
     
     def get_voltage_vector(self):
-        return self.data * self.source.header.voltage_scale
+        return self.data * self.source.voltage_scale
     
     def get_time_vector(self):
-        sampling_frequency = 1. / self.source.header.sampling_frequency
+        sampling_frequency = 1. / self.source.sampling_frequency
 
         num_samples = self.data.shape[0]
         time_data = np.arange(num_samples)

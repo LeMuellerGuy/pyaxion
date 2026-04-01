@@ -27,14 +27,14 @@ class Spike_v1(Waveform):
                          used as the trigger voltage for this spike
     
     """
-    
+
     LOADED_HEADER_SIZE = 30
     # possibly adjust the type hints and create appropriate properties
     def __init__(self, channel:ChannelMapping, start:float, data:np.ndarray, source:'DataSet',
                  triggerSampleOffset:int, standardDeviation:int, thresholdMultiplier:int):
         super().__init__(channel, start, data, source, 1)
-        self.TriggerSampleOffset = triggerSampleOffset
-        self.StandardDeviation = standardDeviation
-        self.ThresholdMultiplier = thresholdMultiplier
+        self.trigger_sample_offset = triggerSampleOffset
+        self.standard_deviation = standardDeviation
+        self.threshold_multiplier = thresholdMultiplier
         # We do not support spike data subsampling at this time.
         # so it is always set to 1

@@ -5,11 +5,23 @@
 This project serves as a mostly faithful reimplementation of the official matlab loader
 for data produced by Axion Biosystem's AxIS software in the form of .raw and .spk files.
 
+This project is neither funded nor endorsed by Axion Biosystem and thus does not guarantee
+functionality and timely updates.
+
 ## Features
 
 The current version supports .raw and .spk files of version 1.x <= 1.3. Unlike the original
 matlab implementation, this project does not support legacy files of version 0.x but I
 would be happy to collaborate on a future inclusion.
+
+This project also contains code to write an older version of .spk files. However, it is currently
+not up to date with the new structure of the matlab/python code so it will likely not work.
+I might update it in the future but I cannot guarantee it, since I am not sure if the use case
+will come up for me. Feel free to open an issue or pull request for any updates an we will see
+what we can do.
+
+On a similar veine there is also a rudimentary binding for python-neo and probeinterface that
+is unfortunately now outdated. If the interest comes up we can also discuss updating this binding.
 
 ## Examples
 

@@ -2,15 +2,30 @@
 requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
+
 [project]
 name = "pyaxion"
 version = "1.0.0"
+authors = [
+  { name="Lennart Müller", email="lennart.mueller@rwth-aachen.de" },
+]
+description = "A python reimplementation of the matlab AxIS file reader."
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Topic :: File Formats",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+license = "MIT"
+license-files = ["LICENSE*"]
 dependencies = [
     "numpy",
-    "scikit-learn", 
-    "matplotlib",
-    "typing_extensions",
-    "tqdm"
 ]
 
 [tool.setuptools.packages.find]

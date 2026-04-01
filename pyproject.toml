@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 license = "MIT"
-license-files = ["LICENSE*"]
+license-files = ["LICENSE"]
 dependencies = [
     "numpy",
 ]

@@ -13,9 +13,49 @@ would be happy to collaborate on a future inclusion.
 
 ## Examples
 
+### Accessing datasets in the file
+
+The `AxisFile` object provides a number of properties that can help you indentify relevant datasets
+in the loaded file. Each of the methods returns the appropriate dataset or `None` if it doesn't
+exist.
+
+It is unlikely/impossible for multiple dataset types to occur in the same file. A notable
+exception would be high and low frequency components of the broad band signal
+
+```python
+from pyaxion.axis_reader import AxisFile, ReturnDimension
+
+# use the file as a context manager to properly release the file opened for reading
+with AxisFile("example_file.raw") as af:
+    # the broad band signal
+    dataset = af.raw_voltage
+    # check the output for validity
+    if dataset is not None:
+        ...
+    # the high-pass filtered portion of the broad band signal
+    dataset = af.broad_band_high
+    # contractility data as a continuous waveform
+    dataset = af.raw_contractility
+    # discontinous spike events
+    dataset = af.spikes
+    # discontinuous local field potential events
+    dataset = af.lfp_events
+```
+
+The returned objects are datasets that define further methods to load the data. They do not
+directly represent the raw data array and as such do not create a large loading overhead.
+
 ### Reading raw voltage data from a file
 
-Voltage data can be loaded in as a 4-D channel array structure. Data is indexed as well
+Once you have obtained your dataset you will want to load the raw data from it. This can
+be either spikes or continuous waveforms. Loading data creates numpy object arrays that
+hold further containers that combine metadata about the raw data like electrode positions
+with the actual data array. This section explains how to create and work with these object
+arrays to obtain the actual numpy arrays containing the data. This example considers
+continuous waveform data, but it works equivalently with spike data and other types of continuous
+data.
+
+Data can be loaded in as a 4-D channel array structure. Data is indexed as well
 row, well column, electrode column, electrode row.
 
 ```python
@@ -24,7 +64,7 @@ from pyaxion.axis_reader import AxisFile, ReturnDimension
 # use the file as a context manager to properly release the file opened for reading
 with AxisFile("example_file.raw") as af:
     # numpy array of shape n_well_rows, n_well_cols, n_el_cols, n_el_rows
-    data = af.datasets[0].load_raw_data(dimension = ReturnDimension.BYELECTRODE)
+    data = af.raw_voltage.load_raw_data(dimension = ReturnDimension.BYELECTRODE)
 ```
 
 The returned array is an `object` numpy array where the objects represent datacontainers that can
@@ -42,7 +82,7 @@ For discontinuous event data (e.g. spikes):
 ```python
 with AxisFile("example_file.raw") as af:
     # numpy array of shape n_well_rows, n_well_cols, n_el_cols, n_el_rows
-    data = af.datasets[0].load_raw_data(dimension = ReturnDimension.BYELECTRODE)
+    data = af.raw_voltage.load_raw_data(dimension = ReturnDimension.BYELECTRODE)
 
     # numpy array of shape n_samples x sample_rate (typically 12.5 kHz)
     # the data is returned volts
@@ -56,11 +96,11 @@ The default argument is `ReturnDimension.BYPLATE`
 ```python
 with AxisFile("example_file.raw") as af:
     # numpy array of shape n_well_rows, n_well_cols, n_el_cols, n_el_rows
-    data = af.datasets[0].load_raw_data(dimension = ReturnDimension.BYELECTRODE)
+    data = af.raw_voltage.load_raw_data(dimension = ReturnDimension.BYELECTRODE)
     # numpy array of n_well_rows, n_well_cols
-    data = af.datasets[0].load_raw_data(dimension = ReturnDimension.BYWELL)
+    data = af.raw_voltage.load_raw_data(dimension = ReturnDimension.BYWELL)
     # numpy array of n_wells x n_electrodes_per_well
-    data = af.datasets[0].load_raw_data(dimension = ReturnDimension.BYPLATE)
+    data = af.raw_voltage.load_raw_data(dimension = ReturnDimension.BYPLATE)
 ```
 
 Electrodes are named by their column and row, such that electrode 23 refers to the electrode in
@@ -71,7 +111,7 @@ Wells and electrodes can be specified during loading to reduce the data size.
 ```python
 with AxisFile("example_file.raw") as af:
     # numpy array of shape n_well_rows, n_well_cols, n_el_cols, n_el_rows
-    data = af.datasets[0].load_raw_data(
+    data = af.raw_voltage.load_raw_data(
         wells = "A1,A2,B4,",
         electrodes = "11,12,23,44", # for a plate with 16 electrodes per well
         # alternatively this package also allows lists of integers
@@ -86,7 +126,7 @@ subsampling.
 ```python
 with AxisFile("example_file.raw") as af:
     # numpy array of shape n_well_rows, n_well_cols, n_el_cols, n_el_rows
-    data = af.datasets[0].load_raw_data(
+    data = af.raw_voltage.load_raw_data(
         wells = "A1,A2,B4,",
         electrodes = [11,12,23,44], # for a plate with 16 electrodes per well
         dimension = ReturnDimension.BYELECTRODE),
@@ -98,7 +138,7 @@ The time range of the loaded data can be adjusted during loading as well.
 ```python
 with AxisFile("example_file.raw") as af:
     # numpy array of shape n_well_rows, n_well_cols, n_el_cols, n_el_rows
-    data = af.datasets[0].load_raw_data(
+    data = af.raw_voltage.load_raw_data(
         wells = "A1,A2,B4,",
         electrodes = [11,12,23,44], # for a plate with 16 electrodes per well
         dimension = ReturnDimension.BYELECTRODE),

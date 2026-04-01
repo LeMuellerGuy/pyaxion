@@ -5,6 +5,9 @@
 This project serves as a mostly faithful reimplementation of the official matlab loader
 for data produced by Axion Biosystem's AxIS software in the form of .raw and .spk files.
 
+This project is neither funded nor endorsed by Axion Biosystem and thus does not guarantee
+functionality and timely updates.
+
 ## Features
 
 The current version supports .raw and .spk files of version 1.x <= 1.3. Unlike the original

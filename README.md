@@ -23,6 +23,14 @@ what we can do.
 On a similar veine there is also a rudimentary binding for python-neo and probeinterface that
 is unfortunately now outdated. If the interest comes up we can also discuss updating this binding.
 
+## Installation
+
+PyAxion is available on PyPi. Installation can be done through pip.
+
+```python
+python -m pip install pyaxion
+```
+
 ## Examples
 
 ### Accessing datasets in the file

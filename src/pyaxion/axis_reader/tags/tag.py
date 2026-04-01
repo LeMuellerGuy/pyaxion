@@ -32,18 +32,14 @@ class Tag:
             elif head.type.value == TagType.WELL_TREATMENT:
                 new = WellInformation(file_id, head)
             elif head.type.value == TagType.STIMULATION_EVENT:
-                #new = StimEvent.StimulationEvent(aFileId, fHead)
                 new = StimulationEvent(file_id, head)
             elif head.type.value == TagType.STIMULATION_CHANNEL_GROUP:
-                #new = StimChannels.channels(aFileId, fHead)
                 new = StimulationChannels(file_id, head)
             elif head.type.value == TagType.STIMULATION_WAVEFORM:
-                #new = StimWave.waveform(aFileId, fHead)
                 new = StimulationWaveform(file_id, head)
             elif head.type.value == TagType.CALIBRATION_TAG:
                 new = Tag(self.tag_guid)
             elif head.type.value == TagType.STIMULATION_LED_GROUP:
-                #new = StimLed.leds(aFileId, fHead)
                 new = StimulationLeds(file_id, head)
             elif head.type.value == TagType.DOSE_EVENT:
                 new = Tag(self.tag_guid)
@@ -494,7 +490,7 @@ class ViabilityImpedanceTag(Tag):
         # in case this raises a shape mismatch error, the jagged array is likely intended
         n_channels = len(self.channel_array.channels)
         self.impedances = np.fromfile(file_id, dtype=complex,
-                                   count=sum(self.frequencies_count*n_channels))
+                                   count=int(sum(self.frequencies_count*n_channels)))
         self.impedances = self.impedances.reshape((n_channels, freq_counts))
 
         if file_id.tell() > (start + raw_tag.entry_record.length):

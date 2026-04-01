@@ -10,56 +10,42 @@ from ..entries.entry_record import EntryRecord
 
 
 class TagType(Enum):
-    #Deleted: Tag revision where this TagGUID has been deleted
-    #remarks: This is a special case, Tags may alternate between this
-    #         type and their own as the are deleted / undeleted
-
-    # WellTreatment:  Describes the treatment state of a well in a file
-
-    #UserAnnotation: Time based note added to the file by the user
-
-    #SystemAnnotation: Time based note added to the file by Axis
-
-    #DataLossEvent: Tag that records any loss of data in the system that affects this 
-    #               recorded file.
-    #Remarks:       Coming soon, Currently Unused!
-
-    #StimulationEvent: Tag that describes a stimulation that was applied to the plate
-    #                   during recording
-
-    #StimulationChannelGroup: Tag that lists the channels that were loaded for stimulation for a StimulationEvent
-    #                         Many StimulationEvent tags may reference the same StimulationChannelGroup
-
-    #StimulationWaveform: Tag that lists the stimulation that was applied for stimulation for a StimulationEvent
-    #                     Many StimulationEvent tags may reference the same StimulationWaveform
-    
-    #CalibrationTag: Tag that is used for axis's internal calibration 
-    #                of noise mesurements (Use is currently not
-    #                supported in matlab)
-    
-    #StimulationLedGroup: Tag that lists the LEDs that were loaded for stimulation for a StimulationEvent
-    #                     Many StimulationEvent tags may reference the same StimulationLedGroup
-    
-    #DoseEvent: (Unsupported in in this library)
-    
-    #StringDictonaryKeyPair: (Unsupported in in this library)
-    
-    #LeapInductionEvent: Tag marking a LEAP induction event for a plate/recording
+    """Enumerates the available tag types in an Axis file."""
     DELETED = 0
+    """Tag revision where this TagGUID has been deleted.
+    This is a special case, Tags may alternate between this type and their own as the
+    are deleted / undeleted"""
     WELL_TREATMENT = np.uint16(1)
+    """Describes the treatment state of a well in a file"""
     USER_ANNOTATION = np.uint16(2)
+    """Time based note added to the file by the user"""
     SYSTEM_ANNOTATION = np.uint16(3)
+    """Time based note added to the file by Axis"""
     DATA_LOSS_EVENT = np.uint16(4)
+    """Tag that records any loss of data in the system that affects this recorded file.
+    Remarks: Coming soon, Currently Unused!"""
     STIMULATION_EVENT = np.uint16(5)
+    """Tag that describes a stimulation that was applied to the plate during recording"""
     STIMULATION_CHANNEL_GROUP = np.uint16(6)
+    """Tag that lists the channels that were loaded for stimulation for a StimulationEvent
+    Many StimulationEvent tags may reference the same StimulationChannelGroup"""
     STIMULATION_WAVEFORM = np.uint16(7)
+    """Tag that lists the stimulation that was applied for stimulation for a StimulationEvent
+    Many StimulationEvent tags may reference the same StimulationWaveform"""
     CALIBRATION_TAG = np.uint16(8)
+    """Tag that is used for axis's internal calibration of noise measurements. May not be work
+    as expected, as it is not supported by the matlab implementation."""
     STIMULATION_LED_GROUP = np.uint16(9)
+    """Tag that lists the LEDs that were loaded for stimulation for a StimulationEvent
+    Many StimulationEvent tags may reference the same StimulationLedGroup"""
     DOSE_EVENT = np.uint16(10)
+    """(Unsupported in in this library)"""
     STRING_DICTIONARY_PAIR = np.uint16(11)
+    """A metadata tag and its associated value."""
     LEAP_INDUCTION_PAIR = np.uint16(12)
-
-
+    """Tag marking a LEAP induction event for a plate/recording"""
+    VIABILITY_IMPEDANCE_EVENT = np.uint16(13)
+    """Tag for acquiring viability data"""
 
 class TagEntry(Entry):
     """

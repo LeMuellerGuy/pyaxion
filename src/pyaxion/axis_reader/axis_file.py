@@ -11,7 +11,8 @@ from pyaxion.axis_reader.block_vector.set import BlockVectorSet
 from pyaxion.axis_reader.block_vector.combined_header import CombinedBlockVectorHeaderEntry
 from pyaxion.axis_reader.block_vector.data_type import BlockVectorDataType
 from pyaxion.axis_reader.block_vector.continuous_header import ContinuousBlockVectorHeaderEntry
-from pyaxion.axis_reader.block_vector.discontinuous_header import DiscontinuousBlockVectorHeaderEntry
+from pyaxion.axis_reader.block_vector.discontinuous_header \
+    import DiscontinuousBlockVectorHeaderEntry
 from pyaxion.axis_reader.entries.channel_array import ChannelArray
 from pyaxion.axis_reader.entries.entry_record import EntryRecord
 from pyaxion.axis_reader.entries.entry_record_id import EntryRecordID
@@ -26,7 +27,7 @@ from pyaxion.axis_reader.dataset.dataset import DataSet
 from pyaxion.axis_reader.dataset.continuous_dataset import ContinuousDataSet
 from pyaxion.axis_reader.dataset.spike_dataset import SpikeDataSet
 
-def _custom_formatwarning(msg, category, filename, lineno, line=None):
+def _custom_formatwarning(msg, category, filename, lineno, line=None): # pylint: disable=unused-argument
     # Format the warning message without the location and source code
     return f"{category.__name__}: {msg}\n"
 
@@ -334,9 +335,11 @@ class AxisFile:
         if len(self.unlinked_stimulation_events) > 0:
             warnings.warn(f"{len(self.unlinked_stimulation_events)} unlinked stimulation events "
                           f"found in file {file_name} which were missing metadata.")
-
-        # this needs to be implemented, basically we want the last event created
-        self.leap_induction = sorted(self.leap_induction, key=lambda x: x.creation_date)[-1]
+        try:
+            self.leap_induction = next(self.leap_induction.sort(
+                key=lambda x: x.creation_time, reverse=True), None)
+        except TypeError:
+            self.leap_induction = None
         self.all_tags = tag_map
 
     def seek_entry_record(self, entry:EntryRecord):
@@ -354,27 +357,28 @@ class AxisFile:
         return next(filter(lambda x: x.is_raw_voltage(), self.datasets), None)
 
     @property
-    def broad_band_high(self):
-        """Returns the broad band high frequency dataset if it exists in the file, otherwise None."""
+    def broad_band_high(self) -> ContinuousDataSet|None:
+        """Returns the broad band high frequency dataset if it exists
+        in the file, otherwise None."""
         return next(filter(lambda x: x.is_highband() , self.datasets), None)
 
     @property
-    def broad_band_low(self):
+    def broad_band_low(self) -> ContinuousDataSet|None:
         """Returns the broad band low frequency dataset if it exists in the file, otherwise None."""
         return next(filter(lambda x: x.is_lowband() , self.datasets), None)
 
     @property
-    def raw_contractility(self):
+    def raw_contractility(self) -> ContinuousDataSet|None:
         """Returns the raw contractility dataset if it exists in the file, otherwise None."""
         return next(filter(lambda x: x.is_raw_contractility() , self.datasets), None)
 
     @property
-    def spikes(self):
+    def spikes(self) -> SpikeDataSet|None:
         """Returns the spike dataset if it exists in the file, otherwise None."""
         return next(filter(lambda x: x.is_spikes() , self.datasets), None)
 
     @property
-    def lfp_events(self):
+    def lfp_events(self) -> SpikeDataSet|None:
         """Returns the LFP events dataset if it exists in the file, otherwise None."""
         return next(filter(lambda x: x.is_lfp() , self.datasets), None)
 

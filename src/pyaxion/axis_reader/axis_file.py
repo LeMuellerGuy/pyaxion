@@ -106,7 +106,7 @@ class AxisFile:
                 raise IOError("Incorrect legacy notes length field")
 
             if self.header_version_major == 0:
-                raise IOError("Axion Py Reader warning: Deprectated axion file types not "
+                raise IOError("pyaxion reader: Deprectated axion file types not "
                               "supported. Rerecord the file in the Axion software to "
                               "update the header information.")
                 #if self.HeaderVersionMinor == 1:
@@ -345,3 +345,9 @@ class AxisFile:
             self.file_id.seek(self.entry_records[i].length, 1)
             i += 1
         return self.file_id.tell()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.file_id.close()

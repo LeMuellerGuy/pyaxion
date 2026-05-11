@@ -42,29 +42,13 @@ class LoadArgs:
         if str(argument).lower() == 'all':
             out = 'all'
         elif isinstance(argument, str):
-            canonical_arg = argument.upper().replace(' ', '')
-            while canonical_arg is not None:
-                if  len(canonical_arg) >= 2 \
-                    and \
-                    (
-                        canonical_arg[0].isalpha() and
-                        canonical_arg[1].isdigit()
-                    ):
-                    split = canonical_arg.split(LoadArgs.delimiter, 1)
-                    if len(split) > 1:
-                        next_well = split[0]
-                        canonical_arg = split[1]
-                    else:
-                        next_well = split[0]
-                        canonical_arg = None
-                    next_well = next_well.strip()
-                    # while matlab's char() converts to a char type, performing
-                    # arithmetic on chars, converts them to utf-8 codes
-                    # which is also what python's ord() does
-                    out.append([int(next_well[1:]), ord(next_well[0]) - ord('A') + 1])
-                else:
-                    raise ValueError(f"Invalid well argument: {argument}. "
-                                     f"Expected a string of the format 'A1,B2,...' or 'all'.")
+            try:
+                argument = argument.upper().strip()
+                wells = argument.split(LoadArgs.delimiter)
+                out = [(int(well[1:], 10), ord(well[0]) - ord('A') + 1) for well in wells]
+            except (ValueError, IndexError) as e:
+                raise ValueError(f"Invalid well argument: {argument}. "
+                                 f"Expected a string of the format 'A1,B2,...' or 'all'.") from e
         else:
             raise ValueError(f"Invalid well argument: {argument}. "
                              f"Expected a string of the format 'A1,B2,...' or 'all'.")
@@ -84,7 +68,7 @@ class LoadArgs:
         elif issubclass(type(argument), Iterable):
             for electrode in argument:
                 out.append([int(electrode // 10), int(electrode % 10)])
-            out:list[list[int]] = np.array(out).squeeze().tolist()
+            out:list[list[int]] = np.array(out).reshape(-1, 2).tolist()
         elif isinstance(argument, str):
             if argument.strip() == '-1' or argument.lower() == 'none':
                 out = 'none'
@@ -147,4 +131,4 @@ class LoadArgs:
         else:
             raise ValueError("Invalid dimensions argument. Expected one of the following values: "\
             f"{LoadArgs.by_plate_dimensions}, {LoadArgs.by_well_dimensions}, "\
-                f"{LoadArgs.by_electrode_dimensions}.")
+                f"{LoadArgs.by_electrode_dimensions} got {argument}.")

@@ -103,31 +103,45 @@ class BasicChannelArray:
                                                channel_mapping.channel_index))
 
     @staticmethod
-    def _hash_el(well_column:int, well_row:int, electrode_column:int, electrode_row:int):
-        h = c_uint32(c_uint32(well_column).value << 24)
-        h = c_uint32(c_uint32(well_row).value << 16 | h.value)
-        h = c_uint32(c_uint32(electrode_column).value << 8 | h.value)
-        h = c_uint32(c_uint32(electrode_row).value | h.value)
-        return np.uint32(h)
+    def _hash_el(well_column:int|np.ndarray[int], well_row:int|np.ndarray[int],
+                 electrode_column:int|np.ndarray[int], electrode_row:int|np.ndarray[int]):
+        well_column = np.uint32(well_column)
+        well_row = np.uint32(well_row)
+        electrode_column = np.uint32(electrode_column)
+        electrode_row = np.uint32(electrode_row)
+        h = well_column << 24
+        h = well_row << 16 | h
+        h = electrode_column << 8 | h
+        h = electrode_row | h
+        return h
 
     @staticmethod
-    def _hash_ch(channel_achk:int, channel_index:int):
-        h = c_uint32(c_uint32(channel_achk).value << 8)
-        h = c_uint32(channel_index).value | h.value
-        return np.uint32(h)
+    def _hash_ch(channel_achk:int|np.ndarray[int], channel_index:int|np.ndarray[int]):
+        channel_achk = np.uint32(channel_achk)
+        channel_index = np.uint32(channel_index)
+        h = channel_achk << 8
+        h = channel_index | h
+        return h
 
     def lookup_electrode(self, well_column:int, well_row:int,
                          electrode_column:int, electrode_row:int):
         electrode_hash = BasicChannelArray._hash_el(well_column, well_row,
                                                    electrode_column, electrode_row)
-        return self.electrode_lut[electrode_hash]
+        if np.isscalar(electrode_hash):
+            return self.electrode_lut[electrode_hash]
+        return np.array([self.electrode_lut[h] for h in electrode_hash])
 
     def lookup_channel(self, channel_achk:int, channel_index:int):
         channel_hash = BasicChannelArray._hash_ch(channel_achk, channel_index)
-        return self.channel_lut[channel_hash]
+        if np.isscalar(channel_hash):
+            return self.channel_lut[channel_hash]
+        return np.array([self.channel_lut[h] for h in channel_hash])
 
     def lookup_channel_mapping(self, channel_achk:int, channel_index:int):
-        return self.channels[self.lookup_channel(channel_achk, channel_index)]
+        lookup = self.lookup_channel(channel_achk, channel_index)
+        if np.isscalar(lookup):
+            return self.channels[lookup]
+        return np.array([self.channels[i] for i in lookup])
 
     def lookup_channel_id(self, channelID:'ChannelID'):
         return self.lookup_channel(channelID.artichoke, channelID.channel)

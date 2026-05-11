@@ -40,14 +40,14 @@ class ContinuousDataSet(DataSet):
                 self.duration = header_entry.duration
 
     def get_continuous_waveform(self, channels_to_load:Iterable[int],
-                                time_range:Iterable[int]|None = None,
+                                timespan:Iterable[int]|None = None,
                                 dimension:ReturnDimension = ReturnDimension.DEFAULT,
                                 subsampling_factor:int = 1):
         """Loads the raw data for the specified channels in the given time span:
         
         Args:
             channels_to_load (Iterable[int]): An iterable of channel indices to load.
-            time_range (Iterable[int], optional): A tuple of (start, end) time in seconds to load.
+            timespan (Iterable[int], optional): A tuple of (start, end) time in seconds to load.
                 If None, all time points will be loaded. Defaults to None.
             dimension (ReturnDimension, optional): The dimension in which to return the data.
                 Defaults to ReturnDimension.DEFAULT.
@@ -73,13 +73,15 @@ class ContinuousDataSet(DataSet):
         bytes_per_second = self.sampling_frequency*self.num_channels_per_block*sample_size
         max_time = self.data_region_length/bytes_per_second
 
-        if time_range != "all":
-            start, end = time_range
-            assert start < end, f"Invalid time range: {time_range}. "\
+        if timespan != "all":
+            start, end = timespan
+            assert start < end, f"Invalid timespan: {timespan}. "\
                 +"Must be increasing."
+            start = max(0, start)
 
             skip_initial_samples = int(start*self.sampling_frequency)
-            skip_initial_bytes = skip_initial_samples*self.num_channels_per_block*sample_size
+            # cast to int to prevent overflow for large offsets
+            skip_initial_bytes = skip_initial_samples*int(self.num_channels_per_block)*sample_size
 
             if start > max_time:
                 warnings.warn(f"Start time {start} exceeds maximum time {max_time}. "
@@ -103,10 +105,10 @@ class ContinuousDataSet(DataSet):
             channels = self.channel_array.channels
             max_extent = np.array(
                 [
-                    max(c.well_row for c in channels)+1,
-                    max(c.well_column for c in channels)+1,
-                    max(c.electrode_column for c in channels)+1,
-                    max(c.electrode_row for c in channels)+1
+                    max(c.well_row for c in channels),
+                    max(c.well_column for c in channels),
+                    max(c.electrode_column for c in channels),
+                    max(c.electrode_row for c in channels)
                 ]
             )
 
@@ -124,19 +126,20 @@ class ContinuousDataSet(DataSet):
         if len(channels_to_load) == 1:
             # equivalent matlab line:
             # fread(this.FileID, aChannelsToLoad - 1, ['1*' fFreadPrecision]);
-            self.file_id.seek(channels_to_load[0]*read_precision, 1)
+            self.file_id.seek(channels_to_load[0]*read_precision().nbytes, 1)
             # we use a memmap to mimic the skip behaviour of matlab fread
             # using numpy memmap doesn't allow us to specify the strides, so we read
             # directly from a buffer and copy the data to avoid segfault when the mmmap is closed
 
             # TODO: check whether the strides need to be multiplied by the byte size of the sample
             # type or whether numpy infers this from the dtype
-            with mmap.mmap(self.file_id.fileno(), length=0, access=mmap.ACCESS_READ) as mm:
-                data = np.ndarray(buffer=mm,
-                                  dtype=read_precision,
-                                  offset=self.file_id.tell(),
-                                  strides=sample_size*n_channels*(subsampling_factor-1),
-                                  shape=(num_samples//subsampling_factor,)).copy()
+            num_samples = num_samples*subsampling_factor*n_channels
+            data = np.memmap(self.file_id, dtype=read_precision, mode='r',
+                             offset=self.file_id.tell(), shape=(num_samples,))
+            # stride out the other channels
+            data = data[:num_samples:n_channels]
+            # subsample the data
+            data = data[:num_samples:subsampling_factor]
             mapping:ChannelMapping = self.channel_array.channels[channels_to_load[0]]
             if self.is_raw_voltage():
                 temp_wave = VoltageWaveform(mapping, start, data, self, subsampling_factor)
@@ -160,21 +163,25 @@ class ContinuousDataSet(DataSet):
 
         # case more channels to load
         num_samples = num_samples//subsampling_factor*n_channels
-        # here we stride only if the subsampling factor is > 1, otherwise the stride is 0
-        # and we read every "line"
-        with mmap.mmap(self.file_id.fileno(), length=0, access=mmap.ACCESS_READ) as mm:
-            data = np.ndarray(buffer=mm,
-                                dtype=read_precision,
-                                offset=self.file_id.tell(),
-                                strides=(sample_size*n_channels)*(subsampling_factor-1),
-                                shape=(num_samples,)).copy()
-        if len(data)%n_channels != 0:
+        # unfortunately, replicating matlab's fread striding behaviour is not straightforward in
+        # python. We could manually seek and read but this would be much slower than just
+        # reading everything and then indexing into it.
+        # We could also consider creating a custom dtype on the fly and then using strided indexing
+        # to avoid reading all the data
+        data = np.memmap(self.file_id, dtype=read_precision, mode='r', offset=self.file_id.tell(),
+                         shape=(num_samples*subsampling_factor,))
+        data = data[:num_samples:subsampling_factor]
+        if len(data) % n_channels != 0:
             warnings.warn(f"Number of samples {len(data)} is not a multiple of number of"
                           f"channels {n_channels}. This may indicate an issue with the"
                            "data or the specified time range.")
             num_samples = (len(data)//n_channels)*n_channels
             data = data[:num_samples]
-        data = data.reshape(n_channels, -1)
+        data = data.reshape(n_channels, -1, order = "F")
+
+        if dimension == ReturnDimension.DEFAULT:
+                dimension = ReturnDimension.BYPLATE
+
         for channel in channels_to_load:
             mapping:ChannelMapping = self.channel_array.channels[channel]
             channel_data = data[channel, :]
@@ -188,15 +195,13 @@ class ContinuousDataSet(DataSet):
                 temp_wave = Waveform(mapping, start, channel_data,
                                         self, subsampling_factor)
 
-            out_index = np.array([mapping.well_row, mapping.well_column,
-                                    mapping.electrode_column, mapping.electrode_row])
-
-            if dimension == ReturnDimension.DEFAULT:
-                dimension = ReturnDimension.BYPLATE
-
             if dimension == ReturnDimension.BYPLATE:
                 waveforms.append(temp_wave)
-            elif dimension == ReturnDimension.BYWELL:
+                continue
+            out_index = np.array([mapping.well_row, mapping.well_column,
+                                    mapping.electrode_column, mapping.electrode_row])
+            out_index -= 1
+            if dimension == ReturnDimension.BYWELL:
                 waveforms[out_index[0], out_index[1]] = temp_wave
             elif dimension == ReturnDimension.BYELECTRODE:
                 waveforms[tuple(out_index)] = temp_wave
@@ -204,8 +209,8 @@ class ContinuousDataSet(DataSet):
                 raise ValueError(f"Invalid dimension: {dimension}")
         return np.array(waveforms, dtype=Waveform)
 
-    def load_raw_data(self, wells:str|None=None, electrodes:str|None=None,
-                      time_range:Iterable[int]|None = None,
+    def load_raw_data(self, wells:str|None=None, electrode:str|None=None,
+                      timespan:Iterable[int]|None = None,
                       dimension:ReturnDimension = ReturnDimension.DEFAULT,
                       subsampling_factor:int = 1):
         """Loads the raw data for the specified wells and electrodes in the given time range.
@@ -216,7 +221,7 @@ class ContinuousDataSet(DataSet):
             electrodes (str, optional): A comma delimited string of electrodes to load
                 (e.g. "11,12") or None. If None, all electrodes will be loaded.
                 Defaults to None.
-            time_range (Iterable[int], optional): A tuple of (start, end) time in seconds to load.
+            timespan (Iterable[int], optional): A tuple of (start, end) time in seconds to load.
                 If None, all time points will be loaded. Defaults to None.
             dimension (ReturnDimension, optional): The dimension in which to return the data.
                 Defaults to ReturnDimension.DEFAULT.
@@ -234,7 +239,7 @@ class ContinuousDataSet(DataSet):
         The objects may be subclasses of Waveform (e.g. VoltageWaveform,
         ContractilityWaveform) depending on the type of data in the dataset.
         """
-        load_args = LoadArgs(wells, electrodes, time_range, dimension,
+        load_args = LoadArgs(wells, electrode, timespan, dimension,
                              subsampling_factor=subsampling_factor)
         channels_to_load = DataSet.get_channels_to_load(self.channel_array,
                                                      load_args.wells,
@@ -243,7 +248,7 @@ class ContinuousDataSet(DataSet):
         subsampling_factor = load_args.subsampling_factor
         return self.get_continuous_waveform(
             channels_to_load=channels_to_load,
-            time_range=load_args.timespan,
+            timespan=load_args.timespan,
             dimension=dimension,
             subsampling_factor=subsampling_factor
         )

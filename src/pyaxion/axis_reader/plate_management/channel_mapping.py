@@ -15,7 +15,7 @@ class ChannelMapping:
     _null_byte = np.array([-1]).astype(np.uint8)[0]
     _null_word = np.array([-1]).astype(np.uint16)[0]
 
-    def __init__(self, well_row:np.uint8, well_column:np.uint8, electrode_column:np.uint8,
+    def __init__(self, well_column:np.uint8, well_row:np.uint8, electrode_column:np.uint8,
                  electrode_row:np.uint8, channel_achk:np.uint8, channel_index:np.uint8,
                  aux_data:np.uint16 = _null_word) -> None:
         self.well_row = well_row
@@ -52,6 +52,7 @@ class ChannelMapping:
 
     @classmethod
     def from_file(cls, file_id:BufferedReader):
+        # this just reads the 6 uint8 values in one go
         idxs = np.fromfile(file_id, dtype=np.uint8, count=6)
         aux_data = np.fromfile(file_id, dtype=np.uint16, count=1)[0]
         return cls(*idxs, aux_data)

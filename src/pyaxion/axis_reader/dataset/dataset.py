@@ -131,6 +131,8 @@ class DataSet:
                 self.voltage_scale = header.voltage_scale
                 self.block_vector_start_time = header.file_start_time
                 self.experiment_start_time = header.experiment_start_time
+                self.data_region_start = vector_set.data.start
+                self.data_region_length = vector_set.data.entry_record.length
 
                 if header_extension is not None:
                     self.version_major = header_extension.extension_version_major
@@ -299,6 +301,21 @@ class DataSet:
         if len(target_wells) == 0 or len(target_els) == 0:
             return channels_out.astype(int)
 
+        # TODO: think about this some more. It can return the correct channels to load
+        # but they are not in order of the requested wells or electrode but are instead
+        # sorted by artichoke/artichoke channel index.
+        # There is probably some way to resort them in the requested order
+        # channel_map = np.array([(channel.well_column, channel.well_row,
+        #                          channel.electrode_column, channel.electrode_row)
+        #                        for channel in channel_array.channels])
+        # well_map = np.rec.fromarrays(channel_map[:,:2].T)
+        # el_map = np.rec.fromarrays(channel_map[:,2:].T)
+        # out_idx = np.nonzero(np.isin(well_map, np.rec.fromarrays(target_wells.T))\
+        #                      & np.isin(el_map, np.rec.fromarrays(target_els.T)))[0]
+        # this shows the ordering
+        # mappings = [channel_array.channels[idx] for idx in out_idx]
+
+        
         for channel_array_index, current_channel in enumerate(channel_array.channels):
             try:
                 well_idx = DataSet._ismember(
@@ -321,7 +338,10 @@ class DataSet:
             # also check array dimensions. They seem to be very confident
             # that the size of the _ismember arrays never mismatches
             channels_out[well_idx * target_els.shape[0] + el_idx] = channel_array_index
-
+        
+        # this shows the ordering of the matlba implementation
+        # mappings_alt = [channel_array.channels[idx] for idx in channels_out if idx != -1]
+        
         # Notify the user of any requested channels that weren't found in the channel array.
         # This is not necessarily an error; for example, if a whole well is requested, and
         # some channels in that well weren't recorded, we should return the well without

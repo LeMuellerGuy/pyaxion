@@ -78,6 +78,7 @@ class SpikeDataSet(DataSet):
                 shape=(int(n_spikes),),             # Repeat=numSpikes
                 order="C",
             )
+        self.load_data = self.load_spike_data
 
     def load_all_spikes(self):
         """
@@ -111,8 +112,10 @@ class SpikeDataSet(DataSet):
         spike_times = data["startingSample"] + data["triggerSample"]/self.sampling_frequency
         return electrodes, spike_times
 
-    def load_spike_data(self, *args, **kwargs):
-        load_args = LoadArgs(*args, **kwargs)
+    def load_spike_data(self, well=None, electrode=None,
+                        timespan=None, dimension=None, subsampling_factor=1):
+        load_args = LoadArgs(wells=well, electrodes=electrode, timespan=timespan,
+                             dimensions=dimension, subsampling_factor=subsampling_factor)
 
         target_well = load_args.wells
         target_electrode = load_args.electrodes
@@ -148,10 +151,10 @@ class SpikeDataSet(DataSet):
             channels = self.channel_array.channels
             max_extent = np.array(
                 [
-                    max(c.well_row for c in channels)+1,
-                    max(c.well_column for c in channels)+1,
-                    max(c.electrode_column for c in channels)+1,
-                    max(c.electrode_row for c in channels)+1
+                    max(c.well_row for c in channels),
+                    max(c.well_column for c in channels),
+                    max(c.electrode_column for c in channels),
+                    max(c.electrode_row for c in channels)
                 ]
             )
 
@@ -171,6 +174,16 @@ class SpikeDataSet(DataSet):
         else:
             loaded_spikes = self.mapped_data
 
+        # in python strings have the annoying property of being a subclass of iterable so checking
+        # for them is not very clean. We therefore implement a check for string time ranges
+        # which is not done in matlab
+        if isinstance(time_range, str):
+            if time_range == "all":
+                # duration of spike files may not be set for older files,
+                # so we take it from the data
+                time_range = [0, self.mapped_data[-1]["startingSample"]+1/12500]
+            else:
+                raise ValueError(f"Invalid time range string: {time_range}")
         if issubclass(type(time_range), Iterable):
             time_range = tuple(time_range)
             start = time_range[0] * self.sampling_frequency
@@ -197,15 +210,16 @@ class SpikeDataSet(DataSet):
         # if we load by plate we just return a flat array
         if storage_type == 0:
             return np.array(loaded_spikes, dtype=object)
-        indices = np.array(
+        indices = np.array([
             [
                 spike.channel.well_row,
                 spike.channel.well_column,
                 spike.channel.electrode_column,
                 spike.channel.electrode_row
             ]
-            for spike in loaded_spikes
+            for spike in loaded_spikes]
         )
+        indices -= 1 # convert to zero-based indexing
         # if by well, we group the spikes accordingly and return a 2D array
         if storage_type == 1:
             indices = indices[:,:2]
